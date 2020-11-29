@@ -147,16 +147,16 @@ class Artist(YandexMusicObject):
 
         super().handle_unknown_kwargs(self, **kwargs)
 
-    def download_og_image(self, filename: str, size: str = '200x200') -> None:
+    async def download_og_image(self, filename: str, size: str = '200x200') -> None:
         """Загрузка изображения для Open Graph.
 
         Args:
             filename (:obj:`str`): Путь для сохранения файла с названием и расширением.
             size (:obj:`str`, optional): Размер обложки.
         """
-        self.client.request.download(f'https://{self.og_image.replace("%%", size)}', filename)
+        await self.client.request.download(f'https://{self.og_image.replace("%%", size)}', filename)
 
-    def download_op_image(self, filename: str, size: str = '200x200') -> None:
+    async def download_op_image(self, filename: str, size: str = '200x200') -> None:
         """Загрузка обложки.
 
         Notes:
@@ -166,35 +166,35 @@ class Artist(YandexMusicObject):
             filename (:obj:`str`): Путь для сохранения файла с названием и расширением.
             size (:obj:`str`, optional): Размер обложки.
         """
-        self.client.request.download(f'https://{self.op_image.replace("%%", size)}', filename)
+        await self.client.request.download(f'https://{self.op_image.replace("%%", size)}', filename)
 
-    def like(self, *args, **kwargs) -> bool:
+    async def like(self, *args, **kwargs) -> bool:
         """Сокращение для::
 
             client.users_likes_artists_add(artist.id, user.id *args, **kwargs)
         """
-        return self.client.users_likes_artists_add(self.id, self.client.me.account.uid, *args, **kwargs)
+        return await self.client.users_likes_artists_add(self.id, await self.client.me.account.uid, *args, **kwargs)
 
-    def dislike(self, *args, **kwargs) -> bool:
+    async def dislike(self, *args, **kwargs) -> bool:
         """Сокращение для::
 
             client.users_likes_artists_remove(artist.id, user.id *args, **kwargs)
         """
-        return self.client.users_likes_artists_remove(self.id, self.client.me.account.uid, *args, **kwargs)
+        return await self.client.users_likes_artists_remove(self.id, await self.client.me.account.uid, *args, **kwargs)
 
-    def get_tracks(self, page=0, page_size=20, *args, **kwargs) -> Optional['ArtistTracks']:
+    async def get_tracks(self, page=0, page_size=20, *args, **kwargs) -> Optional['ArtistTracks']:
         """Сокращение для::
 
             client.artists_tracks(artist.id, page, page_size, *args, **kwargs)
         """
-        return self.client.artists_tracks(self.id, page, page_size, *args, **kwargs)
+        return await self.client.artists_tracks(self.id, page, page_size, *args, **kwargs)
 
-    def get_albums(self, page=0, page_size=20, sort_by='year', *args, **kwargs) -> Optional['ArtistAlbums']:
+    async def get_albums(self, page=0, page_size=20, sort_by='year', *args, **kwargs) -> Optional['ArtistAlbums']:
         """Сокращение для::
 
             client.artists_direct_albums(artist.id, page, page_size, sort_by, *args, **kwargs)
         """
-        return self.client.artists_direct_albums(self.id, page, page_size, sort_by, *args, **kwargs)
+        return await self.client.artists_direct_albums(self.id, page, page_size, sort_by, *args, **kwargs)
 
     @classmethod
     def de_json(cls, data: dict, client: 'Client') -> Optional['Artist']:

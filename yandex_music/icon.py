@@ -34,14 +34,14 @@ class Icon(YandexMusicObject):
 
         super().handle_unknown_kwargs(self, **kwargs)
 
-    def download(self, filename: str, size: str = '200x200') -> None:
+    async def download(self, filename: str, size: str = '200x200') -> None:
         """Загрузка иконки.
 
         Args:
             filename (:obj:`str`): Путь для сохранения файла с названием и расширением.
             size (:obj:`str`, optional): Размер иконки.
         """
-        self.client.request.download(f'https://{self.image_url.replace("%%", size)}', filename)
+        await self.client.request.download(f'https://{self.image_url.replace("%%", size)}', filename)
 
     @classmethod
     def de_json(cls, data: dict, client: 'Client') -> Optional['Icon']:

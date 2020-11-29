@@ -42,7 +42,7 @@ class CaptchaResponse(YandexMusicObject):
 
         super().handle_unknown_kwargs(self, **kwargs)
 
-    def download(self, filename=None):
+    async def download(self, filename=None):
         """Загрузка изображения с капчей.
 
         Args:
@@ -52,7 +52,7 @@ class CaptchaResponse(YandexMusicObject):
         if not filename:
             filename = f'{self.x_captcha_key}.gif'
 
-        self.client.request.download(self.x_captcha_url, filename)
+        await self.client.request.download(self.x_captcha_url, filename)
 
     @classmethod
     def de_json(cls, data: dict, client: 'Client'):

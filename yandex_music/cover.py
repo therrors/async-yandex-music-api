@@ -70,7 +70,7 @@ class Cover(YandexMusicObject):
 
         super().handle_unknown_kwargs(self, **kwargs)
 
-    def download(self, filename: str, index: int = 0, size: str = '200x200') -> None:
+    async def download(self, filename: str, index: int = 0, size: str = '200x200') -> None:
         """Загрузка обложки.
 
         Args:
@@ -80,7 +80,7 @@ class Cover(YandexMusicObject):
         """
         uri = self.uri or self.items_uri[index]
 
-        self.client.request.download(f'https://{uri.replace("%%", size)}', filename)
+        await self.client.request.download(f'https://{uri.replace("%%", size)}', filename)
 
     @classmethod
     def de_json(cls, data: dict, client: 'Client') -> Optional['Cover']:

@@ -180,32 +180,32 @@ class Track(YandexMusicObject):
 
         super().handle_unknown_kwargs(self, **kwargs)
 
-    def get_download_info(self, get_direct_links=False) -> List['DownloadInfo']:
+    async def get_download_info(self, get_direct_links=False) -> List['DownloadInfo']:
         """Сокращение для::
 
             client.tracks_download_info(self.track_id, get_direct_links)
         """
-        self.download_info = self.client.tracks_download_info(self.track_id, get_direct_links)
+        self.download_info = await self.client.tracks_download_info(self.track_id, get_direct_links)
 
         return self.download_info
 
-    def get_supplement(self, *args, **kwargs) -> Optional['Supplement']:
+    async def get_supplement(self, *args, **kwargs) -> Optional['Supplement']:
         """Сокращение для::
 
             client.track_supplement(track.id, *args, **kwargs)
         """
-        return self.client.track_supplement(self.id, *args, **kwargs)
+        return await self.client.track_supplement(self.id, *args, **kwargs)
 
-    def download_cover(self, filename: str, size: str = '200x200') -> None:
+    async def download_cover(self, filename: str, size: str = '200x200') -> None:
         """Загрузка обложки.
 
         Args:
             filename (:obj:`str`): Путь для сохранения файла с названием и расширением.
             size (:obj:`str`, optional): Размер обложки.
         """
-        self.client.request.download(f'https://{self.cover_uri.replace("%%", size)}', filename)
+        await self.client.request.download(f'https://{self.cover_uri.replace("%%", size)}', filename)
 
-    def download_og_image(self, filename: str, size: str = '200x200') -> None:
+    async def download_og_image(self, filename: str, size: str = '200x200') -> None:
         """Загрузка обложки.
 
         Предпочтительнее использовать `self.download_cover()`.
@@ -214,9 +214,9 @@ class Track(YandexMusicObject):
             filename (:obj:`str`): Путь для сохранения файла с названием и расширением.
             size (:obj:`str`, optional): Размер обложки.
         """
-        self.client.request.download(f'https://{self.og_image.replace("%%", size)}', filename)
+        await self.client.request.download(f'https://{self.og_image.replace("%%", size)}', filename)
 
-    def download(self, filename: str, codec: str = 'mp3', bitrate_in_kbps: int = 192) -> None:
+    async def download(self, filename: str, codec: str = 'mp3', bitrate_in_kbps: int = 192) -> None:
         """Загрузка трека.
 
         Note:
@@ -233,7 +233,7 @@ class Track(YandexMusicObject):
             :class:`yandex_music.exceptions.InvalidBitrate`: Если в `self.download_info` не найден подходящий трек.
         """
         if self.download_info is None:
-            self.get_download_info()
+            await self.get_download_info()
 
         for info in self.download_info:
             if info.codec == codec and info.bitrate_in_kbps == bitrate_in_kbps:
@@ -242,19 +242,19 @@ class Track(YandexMusicObject):
         else:
             raise InvalidBitrate('Unavailable bitrate')
 
-    def like(self, *args, **kwargs) -> bool:
+    async def like(self, *args, **kwargs) -> bool:
         """Сокращение для::
 
             client.users_likes_tracks_add(track.id, user.id, *args, **kwargs)
         """
-        return self.client.users_likes_tracks_add(self.track_id, self.client.me.account.uid, *args, **kwargs)
+        return await self.client.users_likes_tracks_add(self.track_id, await self.client.me.account.uid, *args, **kwargs)
 
-    def dislike(self, *args, **kwargs) -> bool:
+    async def dislike(self, *args, **kwargs) -> bool:
         """Сокращение для::
 
             client.users_likes_tracks_remove(track.id, user.id *args, **kwargs)
         """
-        return self.client.users_likes_tracks_remove(self.track_id, self.client.me.account.uid, *args, **kwargs)
+        return await self.client.users_likes_tracks_remove(self.track_id, await self.client.me.account.uid, *args, **kwargs)
 
     @property
     def track_id(self) -> str:

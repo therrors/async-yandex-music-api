@@ -42,22 +42,22 @@ class ShotData(YandexMusicObject):
 
         super().handle_unknown_kwargs(self, **kwargs)
 
-    def download_cover(self, filename: str, size: str = '200x200') -> None:
+    async def download_cover(self, filename: str, size: str = '200x200') -> None:
         """Загрузка обложки.
 
         Args:
             filename (:obj:`str`): Путь для сохранения файла с названием и расширением.
             size (:obj:`str`, optional): Размер обложки.
         """
-        self.client.request.download(f'https://{self.cover_uri.replace("%%", size)}', filename)
+        await self.client.request.download(f'https://{self.cover_uri.replace("%%", size)}', filename)
 
-    def download_mds(self, filename: str) -> None:
+    async def download_mds(self, filename: str) -> None:
         """Загрузка аудиоверсии шота.
 
         Args:
             filename (:obj:`str`): Путь для сохранения файла с названием и расширением.
         """
-        self.client.request.download(self.mds_url, filename)
+        await self.client.request.download(self.mds_url, filename)
 
     @classmethod
     def de_json(cls, data: dict, client: 'Client') -> Optional['ShotData']:

@@ -172,23 +172,23 @@ class Album(YandexMusicObject):
 
         super().handle_unknown_kwargs(self, **kwargs)
 
-    def with_tracks(self, *args, **kwargs) -> Optional['Album']:
+    async def with_tracks(self, *args, **kwargs) -> Optional['Album']:
         """Сокращение для::
 
             client.albums_with_tracks(album.id, *args, **kwargs)
         """
-        return self.client.albums_with_tracks(self.id, *args, **kwargs)
+        return await self.client.albums_with_tracks(self.id, *args, **kwargs)
 
-    def download_cover(self, filename: str, size: str = '200x200') -> None:
+    async def download_cover(self, filename: str, size: str = '200x200') -> None:
         """Загрузка обложки.
 
         Args:
             filename (:obj:`str`): Путь для сохранения файла с названием и расширением.
             size (:obj:`str`, optional): Размер обложки.
         """
-        self.client.request.download(f'https://{self.cover_uri.replace("%%", size)}', filename)
+        await self.client.request.download(f'https://{self.cover_uri.replace("%%", size)}', filename)
 
-    def download_og_image(self, filename: str, size: str = '200x200') -> None:
+    async def download_og_image(self, filename: str, size: str = '200x200') -> None:
         """Загрузка обложки.
 
         Предпочтительнее использовать `self.download_cover()`.
@@ -197,21 +197,21 @@ class Album(YandexMusicObject):
             filename (:obj:`str`): Путь для сохранения файла с названием и расширением.
             size (:obj:`str`, optional): Размер обложки.
         """
-        self.client.request.download(f'https://{self.og_image.replace("%%", size)}', filename)
+        await self.client.request.download(f'https://{self.og_image.replace("%%", size)}', filename)
 
-    def like(self, *args, **kwargs) -> bool:
+    async def like(self, *args, **kwargs) -> bool:
         """Сокращение для::
 
             client.users_likes_albums_add(album.id, user.id *args, **kwargs)
         """
-        return self.client.users_likes_albums_add(self.id, self.client.me.account.uid, *args, **kwargs)
+        return await self.client.users_likes_albums_add(self.id, await self.client.me.account.uid, *args, **kwargs)
 
-    def dislike(self, *args, **kwargs) -> bool:
+    async def dislike(self, *args, **kwargs) -> bool:
         """Сокращение для::
 
             client.users_likes_albums_remove(album.id, user.id *args, **kwargs)
         """
-        return self.client.users_likes_albums_remove(self.id, self.client.me.account.uid, *args, **kwargs)
+        return await self.client.users_likes_albums_remove(self.id, await self.client.me.account.uid, *args, **kwargs)
 
     @classmethod
     def de_json(cls, data: dict, client: 'Client') -> Optional['Album']:

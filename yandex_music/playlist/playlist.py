@@ -256,23 +256,23 @@ class Playlist(YandexMusicObject):
     def playlist_id(self) -> str:
         return f'{self.owner.uid}:{self.kind}'
 
-    def get_recommendations(self, *args, **kwargs) -> Optional['PlaylistRecommendations']:
+    async def get_recommendations(self, *args, **kwargs) -> Optional['PlaylistRecommendations']:
         """Сокращение для::
 
             client.users_playlists_recommendations(playlist.kind, playlist.owner.uid, *args, **kwargs)
         """
-        return self.client.users_playlists_recommendations(self.kind, self.owner.uid, *args, **kwargs)
+        return await self.client.users_playlists_recommendations(self.kind, self.owner.uid, *args, **kwargs)
 
-    def download_animated_cover(self, filename: str, size: str = '200x200') -> None:
+    async def download_animated_cover(self, filename: str, size: str = '200x200') -> None:
         """Загрузка анимированной обложки.
 
         Args:
             filename (:obj:`str`): Путь для сохранения файла с названием и расширением (GIF).
             size (:obj:`str`, optional): Размер анимированной обложки.
         """
-        self.client.request.download(f'https://{self.animated_cover_uri.replace("%%", size)}', filename)
+        await self.client.request.download(f'https://{self.animated_cover_uri.replace("%%", size)}', filename)
 
-    def download_og_image(self, filename: str, size: str = '200x200') -> None:
+    async def download_og_image(self, filename: str, size: str = '200x200') -> None:
         """Загрузка обложки.
 
         Используйте это только когда нет self.cover!
@@ -281,7 +281,7 @@ class Playlist(YandexMusicObject):
             filename (:obj:`str`): Путь для сохранения файла с названием и расширением.
             size (:obj:`str`, optional): Размер обложки.
         """
-        self.client.request.download(f'https://{self.og_image.replace("%%", size)}', filename)
+        await self.client.request.download(f'https://{self.og_image.replace("%%", size)}', filename)
 
     def rename(self, name: str) -> None:
         client, kind = self.client, self.kind
@@ -289,26 +289,26 @@ class Playlist(YandexMusicObject):
         self.__dict__.clear()
         self.__dict__.update(client.users_playlists_name(kind, name).__dict__)
 
-    def like(self, *args, **kwargs) -> bool:
+    async def like(self, *args, **kwargs) -> bool:
         """Сокращение для::
 
             client.users_likes_playlists_add(playlist.uid, user.id *args, **kwargs)
         """
-        return self.client.users_likes_playlists_add(self.uid, self.client.me.account.uid, *args, **kwargs)
+        return await self.client.users_likes_playlists_add(self.uid, await self.client.me.account.uid, *args, **kwargs)
 
-    def dislike(self, *args, **kwargs) -> bool:
+    async def dislike(self, *args, **kwargs) -> bool:
         """Сокращение для::
 
             client.users_likes_playlists_remove(playlist.uid, user.id *args, **kwargs)
         """
-        return self.client.users_likes_playlists_remove(self.uid, self.client.me.account.uid, *args, **kwargs)
+        return await self.client.users_likes_playlists_remove(self.uid, await self.client.me.account.uid, *args, **kwargs)
 
-    def fetch_tracks(self, *args, **kwargs) -> List['TrackShort']:
+    async def fetch_tracks(self, *args, **kwargs) -> List['TrackShort']:
         """Сокращение для::
 
             client.users_playlists(playlist.kind, playlist.owner.id, *args, **kwargs).tracks
         """
-        return self.client.users_playlists(self.kind, self.owner.uid, *args, **kwargs).tracks
+        return await self.client.users_playlists(self.kind, self.owner.uid, *args, **kwargs).tracks
 
     @classmethod
     def de_json(cls, data: dict, client: 'Client') -> Optional['Playlist']:

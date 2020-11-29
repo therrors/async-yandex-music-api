@@ -68,14 +68,14 @@ class User(YandexMusicObject):
 
         super().handle_unknown_kwargs(self, **kwargs)
 
-    def download_avatar(self, filename: str, format_: str = 'normal') -> None:
+    async def download_avatar(self, filename: str, format_: str = 'normal') -> None:
         """Загрузка изображения пользователя.
 
         Args:
             filename (:obj:`str`): Путь для сохранения файла с названием и расширением.
             format_ (:obj:`str`, optional): Формат желаемого изображения (`normal`, `orig`, `small`, `big`).
         """
-        self.client.request.download(f'https://upics.yandex.net/{self.uid}/{format_}', filename)
+        await self.client.request.download(f'https://upics.yandex.net/{self.uid}/{format_}', filename)
 
     @classmethod
     def de_json(cls, data: dict, client: 'Client') -> Optional['User']:

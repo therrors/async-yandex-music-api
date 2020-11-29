@@ -60,7 +60,7 @@ class TrackShort(YandexMusicObject):
 
         super().handle_unknown_kwargs(self, **kwargs)
 
-    def fetch_track(self) -> 'Track':
+    async def fetch_track(self) -> 'Track':
         """Получение полной версии трека.
 
         Returns:
@@ -69,7 +69,7 @@ class TrackShort(YandexMusicObject):
         if self._track:
             return self._track
 
-        self._track = self.client.tracks(self.track_id)[0]
+        self._track = await self.client.tracks(self.track_id)[0]
 
         return self._track
 

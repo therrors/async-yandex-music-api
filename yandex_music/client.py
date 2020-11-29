@@ -79,7 +79,6 @@ class Client(YandexMusicObject):
     """
 
     def __init__(self, token: str = None,
-                 fetch_account_status: bool = True,
                  base_url: str = None,
                  oauth_url: str = None,
                  request: Request = None,
@@ -114,11 +113,11 @@ class Client(YandexMusicObject):
                       'model=Yandex Music API; clid=; device_id=random; uuid=random'
 
         self.me = None
-        if fetch_account_status:
-            self.me = self.account_status()
+            
 
     @classmethod
-    def from_credentials(cls, username: str, password: str, x_captcha_answer: str = None, x_captcha_key: str = None,
+    async def from_credentials(cls, username: str, password: str, x_captcha_answer: str = None, x_captcha_key: str = None,
+                         fetch_account_status: bool = True,
                          captcha_callback: Callable[[Captcha], str] = None, *args, **kwargs) -> 'Client':
         """Инициализция клиента по логину и паролю.
 
@@ -145,7 +144,7 @@ class Client(YandexMusicObject):
         token = None
         while not token:
             try:
-                token = cls(*args, **kwargs).generate_token_by_username_and_password(username, password,
+                token = await cls(*args, **kwargs).generate_token_by_username_and_password(username, password,
                                                                                      x_captcha_answer=x_captcha_answer,
                                                                                      x_captcha_key=x_captcha_key)
             except Captcha as e:
@@ -155,10 +154,14 @@ class Client(YandexMusicObject):
                 x_captcha_answer = captcha_callback(e.captcha)
                 x_captcha_key = e.captcha.x_captcha_key
 
-        return cls(token, *args, **kwargs)
+        obj = cls(token, *args, **kwargs)
+        if fetch_account_status:
+            obj.me = await obj.account_status()
+        return obj
+        
 
     @classmethod
-    def from_token(cls, token: str, *args, **kwargs) -> 'Client':
+    async def from_token(cls, token: str, fetch_account_status: bool = True, *args, **kwargs) -> 'Client':
         """Инициализация клиента по токену.
 
         Note:
@@ -172,10 +175,13 @@ class Client(YandexMusicObject):
             :obj:`yandex_music.Client`.
         """
 
-        return cls(token, *args, **kwargs)
+        obj = cls(token, *args, **kwargs)
+        if fetch_account_status:
+            obj.me = await obj.account_status()
+        return obj
 
     @log
-    def generate_token_by_username_and_password(self, username: str, password: str, grant_type: str = 'password',
+    async def generate_token_by_username_and_password(self, username: str, password: str, grant_type: str = 'password',
                                                 x_captcha_answer: str = None, x_captcha_key: str = None,
                                                 timeout: Union[int, float] = None, *args, **kwargs) -> str:
         """Метод получения OAuth токена по логину и паролю.
@@ -210,7 +216,7 @@ class Client(YandexMusicObject):
         if x_captcha_answer and x_captcha_key:
             data.update({'x_captcha_answer': x_captcha_answer, 'x_captcha_key': x_captcha_key})
 
-        result = self._request.post(url, data, timeout=timeout, *args, **kwargs)
+        result = await self._request.post(url, data, timeout=timeout, *args, **kwargs)
 
         return result.get('access_token')
 
@@ -242,7 +248,7 @@ class Client(YandexMusicObject):
         return self._request
 
     @log
-    def account_status(self, timeout: Union[int, float] = None, *args, **kwargs) -> Optional[Status]:
+    async def account_status(self, timeout: Union[int, float] = None, *args, **kwargs) -> Optional[Status]:
         """Получение статуса аккаунта. Нет обязательных параметров.
 
         Args:
@@ -259,12 +265,12 @@ class Client(YandexMusicObject):
 
         url = f'{self.base_url}/account/status'
 
-        result = self._request.get(url, timeout=timeout, *args, **kwargs)
+        result = await self._request.get(url, timeout=timeout, *args, **kwargs)
 
         return Status.de_json(result, self)
 
     @log
-    def account_settings(self, timeout: Union[int, float] = None, *args, **kwargs) -> Optional[UserSettings]:
+    async def account_settings(self, timeout: Union[int, float] = None, *args, **kwargs) -> Optional[UserSettings]:
         """Получение настроек текущего пользователя.
 
         Args:
@@ -282,12 +288,12 @@ class Client(YandexMusicObject):
 
         url = f'{self.base_url}/account/settings'
 
-        result = self._request.get(url, timeout=timeout, *args, **kwargs)
+        result = await self._request.get(url, timeout=timeout, *args, **kwargs)
 
         return UserSettings.de_json(result, self)
 
     @log
-    def account_settings_set(self, param: str = None, value: Union[str, int, bool] = None,
+    async def account_settings_set(self, param: str = None, value: Union[str, int, bool] = None,
                              data: Dict[str, Union[str, int, bool]] = None, timeout: Union[int, float] = None,
                              *args, **kwargs) -> Optional[UserSettings]:
         """Изменение настроек текущего пользователя.
@@ -315,12 +321,12 @@ class Client(YandexMusicObject):
         if not data:
             data = {param: value}
 
-        result = self._request.post(url, data=data, timeout=timeout, *args, **kwargs)
+        result = await self._request.post(url, data=data, timeout=timeout, *args, **kwargs)
 
         return UserSettings.de_json(result, self)
 
     @log
-    def settings(self, timeout: Union[int, float] = None, *args, **kwargs) -> Optional[Settings]:
+    async def settings(self, timeout: Union[int, float] = None, *args, **kwargs) -> Optional[Settings]:
         """Получение предложений по покупке. Нет обязательных параметров.
 
         Args:
@@ -338,12 +344,12 @@ class Client(YandexMusicObject):
 
         url = f'{self.base_url}/settings'
 
-        result = self._request.get(url, timeout=timeout, *args, **kwargs)
+        result = await self._request.get(url, timeout=timeout, *args, **kwargs)
 
         return Settings.de_json(result, self)
 
     @log
-    def permission_alerts(self, timeout: Union[int, float] = None, *args, **kwargs) -> Optional[PermissionAlerts]:
+    async def permission_alerts(self, timeout: Union[int, float] = None, *args, **kwargs) -> Optional[PermissionAlerts]:
         """Получение оповещений. Нет обязательных параметров.
 
         Args:
@@ -360,12 +366,12 @@ class Client(YandexMusicObject):
 
         url = f'{self.base_url}/permission-alerts'
 
-        result = self._request.get(url, timeout=timeout, *args, **kwargs)
+        result = await self._request.get(url, timeout=timeout, *args, **kwargs)
 
         return PermissionAlerts.de_json(result, self)
 
     @log
-    def account_experiments(self, timeout: Union[int, float] = None, *args, **kwargs) -> Optional[Experiments]:
+    async def account_experiments(self, timeout: Union[int, float] = None, *args, **kwargs) -> Optional[Experiments]:
         """Получение значений экспериментальных функций аккаунта.
 
         Args:
@@ -382,12 +388,12 @@ class Client(YandexMusicObject):
 
         url = f'{self.base_url}/account/experiments'
 
-        result = self._request.get(url, timeout=timeout, *args, **kwargs)
+        result = await self._request.get(url, timeout=timeout, *args, **kwargs)
 
         return Experiments.de_json(result, self)
 
     @log
-    def consume_promo_code(self, code: str, language: str = 'en', timeout: Union[int, float] = None,
+    async def consume_promo_code(self, code: str, language: str = 'en', timeout: Union[int, float] = None,
                            *args, **kwargs) -> Optional[PromoCodeStatus]:
         """Активация промо-кода.
 
@@ -407,12 +413,12 @@ class Client(YandexMusicObject):
 
         url = f'{self.base_url}/account/consume-promo-code'
 
-        result = self._request.post(url, {'code': code, 'language': language}, timeout=timeout, *args, **kwargs)
+        result = await self._request.post(url, {'code': code, 'language': language}, timeout=timeout, *args, **kwargs)
 
         return PromoCodeStatus.de_json(result, self)
 
     @log
-    def feed(self, timeout: Union[int, float] = None, *args, **kwargs) -> Optional[Feed]:
+    async def feed(self, timeout: Union[int, float] = None, *args, **kwargs) -> Optional[Feed]:
         """Получение потока информации (фида) подобранного под пользователя. Содержит умные плейлисты.
 
         Args:
@@ -429,20 +435,20 @@ class Client(YandexMusicObject):
 
         url = f'{self.base_url}/feed'
 
-        result = self._request.get(url, timeout=timeout, *args, **kwargs)
+        result = await self._request.get(url, timeout=timeout, *args, **kwargs)
 
         return Feed.de_json(result, self)
 
     @log
-    def feed_wizard_is_passed(self, timeout: Union[int, float] = None, *args, **kwargs) -> bool:
+    async def feed_wizard_is_passed(self, timeout: Union[int, float] = None, *args, **kwargs) -> bool:
         url = f'{self.base_url}/feed/wizard/is-passed'
 
-        result = self._request.get(url, timeout=timeout, *args, **kwargs)
+        result = await self._request.get(url, timeout=timeout, *args, **kwargs)
 
         return result.get('is_wizard_passed') or False
 
     @log
-    def landing(self, blocks: Union[str, List[str]], timeout: Union[int, float] = None,
+    async def landing(self, blocks: Union[str, List[str]], timeout: Union[int, float] = None,
                 *args, **kwargs) -> Optional[Landing]:
         """Получение лендинг-страницы содержащий блоки с новыми релизами, чартами, плейлистами с новинками и т.д.
 
@@ -465,12 +471,12 @@ class Client(YandexMusicObject):
 
         url = f'{self.base_url}/landing3'
 
-        result = self._request.get(url, {'blocks': blocks, 'eitherUserId': '10254713668400548221'}, timeout=timeout, *args, **kwargs)
+        result = await self._request.get(url, {'blocks': blocks, 'eitherUserId': '10254713668400548221'}, timeout=timeout, *args, **kwargs)
 
         return Landing.de_json(result, self)
 
     @log
-    def chart(self, chart_option: str = '', timeout: Union[int, float] = None, *args, **kwargs) -> Optional[ChartInfo]:
+    async def chart(self, chart_option: str = '', timeout: Union[int, float] = None, *args, **kwargs) -> Optional[ChartInfo]:
         """Получение чарта.
 
         Note:
@@ -495,12 +501,12 @@ class Client(YandexMusicObject):
         if chart_option:
             url = f'{url}/{chart_option}'
 
-        result = self._request.get(url, timeout=timeout, *args, **kwargs)
+        result = await self._request.get(url, timeout=timeout, *args, **kwargs)
 
         return ChartInfo.de_json(result, self)
 
     @log
-    def new_releases(self, timeout: Union[int, float] = None, *args, **kwargs) -> Optional[LandingList]:
+    async def new_releases(self, timeout: Union[int, float] = None, *args, **kwargs) -> Optional[LandingList]:
         """Получение полного списка всех новых релизов (альбомов).
 
         Args:
@@ -517,12 +523,12 @@ class Client(YandexMusicObject):
 
         url = f'{self.base_url}/landing3/new-releases'
 
-        result = self._request.get(url, timeout=timeout, *args, **kwargs)
+        result = await self._request.get(url, timeout=timeout, *args, **kwargs)
 
         return LandingList.de_json(result, self)
 
     @log
-    def new_playlists(self, timeout: Union[int, float] = None, *args, **kwargs) -> Optional[LandingList]:
+    async def new_playlists(self, timeout: Union[int, float] = None, *args, **kwargs) -> Optional[LandingList]:
         """Получение полного списка всех новых плейлистов.
 
         Args:
@@ -539,12 +545,12 @@ class Client(YandexMusicObject):
 
         url = f'{self.base_url}/landing3/new-playlists'
 
-        result = self._request.get(url, timeout=timeout, *args, **kwargs)
+        result = await self._request.get(url, timeout=timeout, *args, **kwargs)
 
         return LandingList.de_json(result, self)
 
     @log
-    def podcasts(self, timeout: Union[int, float] = None, *args, **kwargs) -> Optional[LandingList]:
+    async def podcasts(self, timeout: Union[int, float] = None, *args, **kwargs) -> Optional[LandingList]:
         """Получение подкастов с лендинга.
 
         Args:
@@ -561,12 +567,12 @@ class Client(YandexMusicObject):
 
         url = f'{self.base_url}/landing3/podcasts'
 
-        result = self._request.get(url, timeout=timeout, *args, **kwargs)
+        result = await self._request.get(url, timeout=timeout, *args, **kwargs)
 
         return LandingList.de_json(result, self)
 
     @log
-    def genres(self, timeout: Union[int, float] = None, *args, **kwargs) -> List[Genre]:
+    async def genres(self, timeout: Union[int, float] = None, *args, **kwargs) -> List[Genre]:
         """Получение жанров музыки.
 
         Args:
@@ -583,12 +589,12 @@ class Client(YandexMusicObject):
 
         url = f'{self.base_url}/genres'
 
-        result = self._request.get(url, timeout=timeout, *args, **kwargs)
+        result = await self._request.get(url, timeout=timeout, *args, **kwargs)
 
         return Genre.de_list(result, self)
 
     @log
-    def tags(self, tag_id: str, timeout: Union[int, float] = None, *args, **kwargs) -> Optional[TagResult]:
+    async def tags(self, tag_id: str, timeout: Union[int, float] = None, *args, **kwargs) -> Optional[TagResult]:
         """Получение тега (подборки).
 
         Note:
@@ -612,12 +618,12 @@ class Client(YandexMusicObject):
 
         url = f'{self.base_url}/tags/{tag_id}/playlist-ids'
 
-        result = self._request.get(url, timeout=timeout, *args, **kwargs)
+        result = await self._request.get(url, timeout=timeout, *args, **kwargs)
 
         return TagResult.de_json(result, self)
 
     @log
-    def tracks_download_info(self, track_id: Union[str, int], get_direct_links: bool = False,
+    async def tracks_download_info(self, track_id: Union[str, int], get_direct_links: bool = False,
                              timeout: Union[int, float] = None, *args, **kwargs) -> List[DownloadInfo]:
         """Получение информации о доступных вариантах загрузки трека.
 
@@ -637,12 +643,12 @@ class Client(YandexMusicObject):
 
         url = f'{self.base_url}/tracks/{track_id}/download-info'
 
-        result = self._request.get(url, timeout=timeout, *args, **kwargs)
+        result = await self._request.get(url, timeout=timeout, *args, **kwargs)
 
         return DownloadInfo.de_list(result, self, get_direct_links)
 
     @log
-    def track_supplement(self, track_id: Union[str, int], timeout: Union[int, float] = None,
+    async def track_supplement(self, track_id: Union[str, int], timeout: Union[int, float] = None,
                          *args, **kwargs) -> Optional[Supplement]:
         """Получение дополнительной информации о треке.
 
@@ -661,12 +667,12 @@ class Client(YandexMusicObject):
 
         url = f'{self.base_url}/tracks/{track_id}/supplement'
 
-        result = self._request.get(url, timeout=timeout, *args, **kwargs)
+        result = await self._request.get(url, timeout=timeout, *args, **kwargs)
 
         return Supplement.de_json(result, self)
 
     @log
-    def tracks_similar(self, track_id: Union[str, int], timeout: Union[int, float] = None,
+    async def tracks_similar(self, track_id: Union[str, int], timeout: Union[int, float] = None,
                        *args, **kwargs) -> Optional[SimilarTracks]:
         """Получение похожих треков.
 
@@ -685,12 +691,12 @@ class Client(YandexMusicObject):
 
         url = f'{self.base_url}/tracks/{track_id}/similar'
 
-        result = self._request.get(url, timeout=timeout, *args, **kwargs)
+        result = await self._request.get(url, timeout=timeout, *args, **kwargs)
 
         return SimilarTracks.de_json(result, self)
 
     @log
-    def play_audio(self,
+    async def play_audio(self,
                    track_id: Union[str, int],
                    from_: str,
                    album_id: Union[str, int],
@@ -751,11 +757,11 @@ class Client(YandexMusicObject):
             'client-now': client_now or f'{datetime.now().isoformat()}Z'
         }
 
-        result = self._request.post(url, data, timeout=timeout, *args, **kwargs)
+        result = await self._request.post(url, data, timeout=timeout, *args, **kwargs)
 
         return result == 'ok'
 
-    def albums_with_tracks(self, album_id: Union[str, int], timeout: Union[int, float] = None,
+    async def albums_with_tracks(self, album_id: Union[str, int], timeout: Union[int, float] = None,
                            *args, **kwargs) -> Optional[Album]:
         """Получение альбома по его уникальному идентификатору вместе с треками.
 
@@ -774,12 +780,12 @@ class Client(YandexMusicObject):
 
         url = f'{self.base_url}/albums/{album_id}/with-tracks'
 
-        result = self._request.get(url, timeout=timeout, *args, **kwargs)
+        result = await self._request.get(url, timeout=timeout, *args, **kwargs)
 
         return Album.de_json(result, self)
 
     @log
-    def search(self,
+    async def search(self,
                text: str,
                nocorrect: bool = False,
                type_: str = 'all',
@@ -823,12 +829,12 @@ class Client(YandexMusicObject):
             'playlist-in-best': playlist_in_best,
         }
 
-        result = self._request.get(url, params, timeout=timeout, *args, **kwargs)
+        result = await self._request.get(url, params, timeout=timeout, *args, **kwargs)
 
         return Search.de_json(result, self)
 
     @log
-    def search_suggest(self, part: str, timeout: Union[int, float] = None,
+    async def search_suggest(self, part: str, timeout: Union[int, float] = None,
                        *args, **kwargs) -> Optional[Suggestions]:
         """Получение подсказок по введенной части поискового запроса.
 
@@ -847,12 +853,12 @@ class Client(YandexMusicObject):
 
         url = f'{self.base_url}/search/suggest'
 
-        result = self._request.get(url, {'part': part}, timeout=timeout, *args, **kwargs)
+        result = await self._request.get(url, {'part': part}, timeout=timeout, *args, **kwargs)
 
         return Suggestions.de_json(result, self)
 
     @log
-    def users_settings(self, user_id: Union[str, int] = None, timeout: Union[int, float] = None,
+    async def users_settings(self, user_id: Union[str, int] = None, timeout: Union[int, float] = None,
                        *args, **kwargs) -> Optional[UserSettings]:
         """Получение настроек пользователя.
 
@@ -878,12 +884,12 @@ class Client(YandexMusicObject):
 
         url = f'{self.base_url}/users/{user_id}/settings'
 
-        result = self._request.get(url, timeout=timeout, *args, **kwargs)
+        result = await self._request.get(url, timeout=timeout, *args, **kwargs)
 
         return UserSettings.de_json(result.get('user_settings'), self)
 
     @log
-    def users_playlists(self, kind: Union[List[Union[str, int]], str, int], user_id: Union[str, int] = None,
+    async def users_playlists(self, kind: Union[List[Union[str, int]], str, int], user_id: Union[str, int] = None,
                         timeout: Union[int, float] = None, *args, **kwargs) -> Union[Playlist, List[Playlist]]:
         """Получение плейлиста или списка плейлистов по уникальным идентификаторам.
 
@@ -916,17 +922,17 @@ class Client(YandexMusicObject):
                 'kinds': kind
             }
 
-            result = self._request.post(url, data, timeout=timeout, *args, **kwargs)
+            result = await self._request.post(url, data, timeout=timeout, *args, **kwargs)
 
             return Playlist.de_list(result, self)
         else:
             url = f'{self.base_url}/users/{user_id}/playlists/{kind}'
-            result = self._request.get(url, timeout=timeout, *args, **kwargs)
+            result = await self._request.get(url, timeout=timeout, *args, **kwargs)
 
             return Playlist.de_json(result, self)
 
     @log
-    def users_playlists_recommendations(self, kind: Union[str, int], user_id: Union[str, int] = None,
+    async def users_playlists_recommendations(self, kind: Union[str, int], user_id: Union[str, int] = None,
                                         timeout: Union[int, float] = None, *args, **kwargs):
         """Получение рекомендаций для плейлиста.
 
@@ -948,12 +954,12 @@ class Client(YandexMusicObject):
 
         url = f'{self.base_url}/users/{user_id}/playlists/{kind}/recommendations'
 
-        result = self._request.get(url, timeout=timeout, *args, **kwargs)
+        result = await self._request.get(url, timeout=timeout, *args, **kwargs)
 
         return PlaylistRecommendations.de_json(result, self)
 
     @log
-    def users_playlists_create(self, title: str, visibility: str = 'public', user_id: Union[str, int] = None,
+    async def users_playlists_create(self, title: str, visibility: str = 'public', user_id: Union[str, int] = None,
                                timeout: Union[int, float] = None, *args, **kwargs) -> Optional[Playlist]:
         """Создание плейлиста.
 
@@ -982,12 +988,12 @@ class Client(YandexMusicObject):
             'visibility': visibility
         }
 
-        result = self._request.post(url, data, timeout=timeout, *args, **kwargs)
+        result = await self._request.post(url, data, timeout=timeout, *args, **kwargs)
 
         return Playlist.de_json(result, self)
 
     @log
-    def users_playlists_delete(self, kind: Union[str, int], user_id: Union[str, int] = None,
+    async def users_playlists_delete(self, kind: Union[str, int], user_id: Union[str, int] = None,
                                timeout: Union[int, float] = None, *args, **kwargs) -> bool:
         """Удаление плейлиста.
 
@@ -1010,12 +1016,12 @@ class Client(YandexMusicObject):
 
         url = f'{self.base_url}/users/{user_id}/playlists/{kind}/delete'
 
-        result = self._request.post(url, timeout=timeout, *args, **kwargs)
+        result = await self._request.post(url, timeout=timeout, *args, **kwargs)
 
         return result == 'ok'
 
     @log
-    def users_playlists_name(self, kind: Union[str, int], name: str, user_id: Union[str, int] = None,
+    async def users_playlists_name(self, kind: Union[str, int], name: str, user_id: Union[str, int] = None,
                              timeout: Union[int, float] = None, *args, **kwargs) -> Optional[Playlist]:
         """Изменение названия плейлиста.
 
@@ -1039,12 +1045,12 @@ class Client(YandexMusicObject):
 
         url = f'{self.base_url}/users/{user_id}/playlists/{kind}/name'
 
-        result = self._request.post(url, {'value': name}, timeout=timeout, *args, **kwargs)
+        result = await self._request.post(url, {'value': name}, timeout=timeout, *args, **kwargs)
 
         return Playlist.de_json(result, self)
 
     @log
-    def users_playlists_visibility(self, kind: Union[str, int], visibility: str, user_id: Union[str, int] = None,
+    async def users_playlists_visibility(self, kind: Union[str, int], visibility: str, user_id: Union[str, int] = None,
                                    timeout: Union[int, float] = None, *args, **kwargs) -> Optional[Playlist]:
         """Изменение видимости плейлиста.
 
@@ -1071,12 +1077,12 @@ class Client(YandexMusicObject):
 
         url = f'{self.base_url}/users/{user_id}/playlists/{kind}/visibility'
 
-        result = self._request.post(url, {'value': visibility}, timeout=timeout, *args, **kwargs)
+        result = await self._request.post(url, {'value': visibility}, timeout=timeout, *args, **kwargs)
 
         return Playlist.de_json(result, self)
 
     @log
-    def users_playlists_change(self, kind: Union[str, int], diff: str, revision: int = 1,
+    async def users_playlists_change(self, kind: Union[str, int], diff: str, revision: int = 1,
                                user_id: Union[str, int] = None, timeout: Union[int, float] = None,
                                *args, **kwargs) -> Optional[Playlist]:
         """Изменение плейлиста.
@@ -1113,12 +1119,12 @@ class Client(YandexMusicObject):
             'diff': diff
         }
 
-        result = self._request.post(url, data, timeout=timeout, *args, **kwargs)
+        result = await self._request.post(url, data, timeout=timeout, *args, **kwargs)
 
         return Playlist.de_json(result, self)
 
     @log
-    def users_playlists_insert_track(self, kind: Union[str, int], track_id: Union[str, int], album_id: Union[str, int],
+    async def users_playlists_insert_track(self, kind: Union[str, int], track_id: Union[str, int], album_id: Union[str, int],
                                      at: int = 0, revision: int = 1, user_id: Union[str, int] = None,
                                      timeout: Union[int, float] = None, *args, **kwargs) -> Optional[Playlist]:
         """Добавление трека в плейлист.
@@ -1149,10 +1155,10 @@ class Client(YandexMusicObject):
 
         diff = Difference().add_insert(at, {'id': track_id, 'album_id': album_id})
 
-        return self.users_playlists_change(kind, diff.to_json(), revision, user_id, timeout, *args, **kwargs)
+        return await self.users_playlists_change(kind, diff.to_json(), revision, user_id, timeout, *args, **kwargs)
 
     @log
-    def users_playlists_delete_track(self, kind: Union[str, int], from_: int, to: int, revision: int = 1,
+    async def users_playlists_delete_track(self, kind: Union[str, int], from_: int, to: int, revision: int = 1,
                                      user_id: Union[str, int] = None, timeout: Union[int, float] = None,
                                      *args, **kwargs) -> Optional[Playlist]:
         """Удаление треков из плейлиста.
@@ -1182,10 +1188,10 @@ class Client(YandexMusicObject):
 
         diff = Difference().add_delete(from_, to)
 
-        return self.users_playlists_change(kind, diff.to_json(), revision, user_id, timeout, *args, **kwargs)
+        return await self.users_playlists_change(kind, diff.to_json(), revision, user_id, timeout, *args, **kwargs)
 
     @log
-    def rotor_account_status(self, timeout: Union[int, float] = None, *args, **kwargs) -> Optional[Status]:
+    async def rotor_account_status(self, timeout: Union[int, float] = None, *args, **kwargs) -> Optional[Status]:
         """Получение статуса пользователя с дополнителньыми полями.
 
         Note:
@@ -1206,12 +1212,12 @@ class Client(YandexMusicObject):
 
         url = f'{self.base_url}/rotor/account/status'
 
-        result = self._request.get(url, timeout=timeout, *args, **kwargs)
+        result = await self._request.get(url, timeout=timeout, *args, **kwargs)
 
         return Status.de_json(result, self)
 
     @log
-    def rotor_stations_dashboard(self, timeout: Union[int, float] = None,
+    async def rotor_stations_dashboard(self, timeout: Union[int, float] = None,
                                  *args, **kwargs) -> Optional[Dashboard]:
         """Получение рекомендованных станций текущего пользователя.
 
@@ -1229,12 +1235,12 @@ class Client(YandexMusicObject):
 
         url = f'{self.base_url}/rotor/stations/dashboard'
 
-        result = self._request.get(url, timeout=timeout, *args, **kwargs)
+        result = await self._request.get(url, timeout=timeout, *args, **kwargs)
 
         return Dashboard.de_json(result, self)
 
     @log
-    def rotor_stations_list(self, language: str = 'ru', timeout: Union[int, float] = None,
+    async def rotor_stations_list(self, language: str = 'ru', timeout: Union[int, float] = None,
                             *args, **kwargs) -> List[StationResult]:
         """Получение всех радиостанций с настройками пользователя.
 
@@ -1257,12 +1263,12 @@ class Client(YandexMusicObject):
 
         url = f'{self.base_url}/rotor/stations/list'
 
-        result = self._request.get(url, {'language': language}, timeout=timeout, *args, **kwargs)
+        result = await self._request.get(url, {'language': language}, timeout=timeout, *args, **kwargs)
 
         return StationResult.de_list(result, self)
 
     @log
-    def rotor_station_feedback(self, station: str, type_: str, timestamp: Union[str, float, int] = None,
+    async def rotor_station_feedback(self, station: str, type_: str, timestamp: Union[str, float, int] = None,
                                from_: str = None, batch_id: str = None, total_played_seconds: Union[int, float] = None,
                                track_id: Union[str, int] = None, timeout: Union[int, float] = None,
                                *args, **kwargs) -> bool:
@@ -1320,12 +1326,12 @@ class Client(YandexMusicObject):
         if total_played_seconds:
             data.update({'totalPlayedSeconds': total_played_seconds})
 
-        result = self._request.post(url, params=params, json=data, timeout=timeout, *args, **kwargs)
+        result = await self._request.post(url, params=params, json=data, timeout=timeout, *args, **kwargs)
 
         return result == 'ok'
 
     @log
-    def rotor_station_feedback_radio_started(self, station: str, from_: str, batch_id: str = None,
+    async def rotor_station_feedback_radio_started(self, station: str, from_: str, batch_id: str = None,
                                              timestamp: Union[str, float, int] = None,
                                              timeout: Union[int, float] = None, *args, **kwargs) -> bool:
         """Сокращение для::
@@ -1342,7 +1348,7 @@ class Client(YandexMusicObject):
                                            timeout=timeout, *args, **kwargs)
 
     @log
-    def rotor_station_feedback_track_started(self, station: str, track_id: Union[str, int], batch_id: str = None,
+    async def rotor_station_feedback_track_started(self, station: str, track_id: Union[str, int], batch_id: str = None,
                                              timestamp: Union[str, float, int] = None,
                                              timeout: Union[int, float] = None, *args, **kwargs) -> bool:
         """Сокращение для::
@@ -1359,7 +1365,7 @@ class Client(YandexMusicObject):
                                            timeout=timeout, *args, **kwargs)
 
     @log
-    def rotor_station_feedback_track_finished(self, station: str, track_id: Union[str, int],
+    async def rotor_station_feedback_track_finished(self, station: str, track_id: Union[str, int],
                                               total_played_seconds: float, batch_id: str = None,
                                               timestamp: Union[str, float, int] = None,
                                               timeout: Union[int, float] = None, *args, **kwargs) -> bool:
@@ -1379,7 +1385,7 @@ class Client(YandexMusicObject):
                                            timeout=timeout, *args, **kwargs)
 
     @log
-    def rotor_station_feedback_skip(self, station: str, track_id: Union[str, int],
+    async def rotor_station_feedback_skip(self, station: str, track_id: Union[str, int],
                                     total_played_seconds: float, batch_id: str = None,
                                     timestamp: Union[str, float, int] = None,
                                     timeout: Union[int, float] = None, *args, **kwargs) -> bool:
@@ -1399,7 +1405,7 @@ class Client(YandexMusicObject):
                                            timeout=timeout, *args, **kwargs)
 
     @log
-    def rotor_station_info(self, station: str, timeout: Union[int, float] = None,
+    async def rotor_station_info(self, station: str, timeout: Union[int, float] = None,
                            *args, **kwargs) -> List[StationResult]:
         """Получение информации о станции и пользовательских настроек на неё.
 
@@ -1418,12 +1424,12 @@ class Client(YandexMusicObject):
 
         url = f'{self.base_url}/rotor/station/{station}/info'
 
-        result = self._request.get(url, timeout=timeout, *args, **kwargs)
+        result = await self._request.get(url, timeout=timeout, *args, **kwargs)
 
         return StationResult.de_list(result, self)
 
     @log
-    def rotor_station_settings2(self, station: str, mood_energy: str, diversity: str, language: str = 'not-russian',
+    async def rotor_station_settings2(self, station: str, mood_energy: str, diversity: str, language: str = 'not-russian',
                                 timeout: Union[int, float] = None, *args, **kwargs) -> bool:
         """Изменение настроек определённой станции.
 
@@ -1462,12 +1468,12 @@ class Client(YandexMusicObject):
         if language:
             data.update({'language': language})
 
-        result = self._request.post(url, json=data, timeout=timeout, *args, **kwargs)
+        result = await self._request.post(url, json=data, timeout=timeout, *args, **kwargs)
 
         return result == 'ok'
 
     @log
-    def rotor_station_tracks(self, station: str, settings2: bool = True, queue: Union[str, int] = None,
+    async def rotor_station_tracks(self, station: str, settings2: bool = True, queue: Union[str, int] = None,
                              timeout: Union[int, float] = None, *args, **kwargs) -> Optional[StationTracksResult]:
         """Получение цепочки треков определённой станции.
 
@@ -1510,12 +1516,12 @@ class Client(YandexMusicObject):
         if queue:
             params = {'queue': queue}
 
-        result = self._request.get(url, params=params, timeout=timeout, *args, **kwargs)
+        result = await self._request.get(url, params=params, timeout=timeout, *args, **kwargs)
 
         return StationTracksResult.de_json(result, self)
 
     @log
-    def artists_brief_info(self, artist_id: Union[str, int], timeout: Union[int, float] = None,
+    async def artists_brief_info(self, artist_id: Union[str, int], timeout: Union[int, float] = None,
                            *args, **kwargs) -> Optional[BriefInfo]:
         """Получение информации об артисте.
 
@@ -1533,12 +1539,12 @@ class Client(YandexMusicObject):
         """
         url = f'{self.base_url}/artists/{artist_id}/brief-info'
 
-        result = self._request.get(url, timeout=timeout, *args, **kwargs)
+        result = await self._request.get(url, timeout=timeout, *args, **kwargs)
 
         return BriefInfo.de_json(result, self)
 
     @log
-    def artists_tracks(self, artist_id: Union[str, int], page: int = 0, page_size: int = 20,
+    async def artists_tracks(self, artist_id: Union[str, int], page: int = 0, page_size: int = 20,
                        timeout: Union[int, float] = None, *args, **kwargs) -> Optional[ArtistTracks]:
         """Получение треков артиста.
 
@@ -1564,12 +1570,12 @@ class Client(YandexMusicObject):
             'page-size': page_size
         }
 
-        result = self._request.get(url, params, timeout=timeout, *args, **kwargs)
+        result = await self._request.get(url, params, timeout=timeout, *args, **kwargs)
 
         return ArtistTracks.de_json(result, self)
 
     @log
-    def artists_direct_albums(self, artist_id: Union[str, int], page: int = 0, page_size: int = 20,
+    async def artists_direct_albums(self, artist_id: Union[str, int], page: int = 0, page_size: int = 20,
                               sort_by: str = 'year', timeout: Union[int, float] = None,
                               *args, **kwargs) -> Optional[ArtistAlbums]:
         """Получение альбомов артиста.
@@ -1601,11 +1607,11 @@ class Client(YandexMusicObject):
             'page-size': page_size
         }
 
-        result = self._request.get(url, params, timeout=timeout, *args, **kwargs)
+        result = await self._request.get(url, params, timeout=timeout, *args, **kwargs)
 
         return ArtistAlbums.de_json(result, self)
 
-    def _like_action(self, object_type: str, ids: Union[List[Union[str, int]], str, int], remove: bool = False,
+    async def _like_action(self, object_type: str, ids: Union[List[Union[str, int]], str, int], remove: bool = False,
                      user_id: Union[str, int] = None, timeout: Union[int, float] = None, *args, **kwargs) -> bool:
         """Действия с отметкой "Мне нравится".
 
@@ -1638,7 +1644,7 @@ class Client(YandexMusicObject):
         action = 'remove' if remove else 'add-multiple'
         url = f'{self.base_url}/users/{user_id}/likes/{object_type}s/{action}'
 
-        result = self._request.post(url, {f'{object_type}-ids': ids}, timeout=timeout, *args, **kwargs)
+        result = await self._request.post(url, {f'{object_type}-ids': ids}, timeout=timeout, *args, **kwargs)
 
         if object_type == 'track':
             return 'revision' in result
@@ -1646,7 +1652,7 @@ class Client(YandexMusicObject):
         return result == 'ok'
 
     @log
-    def users_likes_tracks_add(self, track_ids: Union[List[Union[str, int]], str, int], user_id: Union[str, int] = None,
+    async def users_likes_tracks_add(self, track_ids: Union[List[Union[str, int]], str, int], user_id: Union[str, int] = None,
                                timeout: Union[int, float] = None, *args, **kwargs) -> bool:
         """Поставить отметку "Мне нравится" треку/трекам.
 
@@ -1668,10 +1674,10 @@ class Client(YandexMusicObject):
         Raises:
             :class:`yandex_music.exceptions.YandexMusicError`: Базовое исключение библиотеки.
         """
-        return self._like_action('track', track_ids, False, user_id, timeout, *args, **kwargs)
+        return await self._like_action('track', track_ids, False, user_id, timeout, *args, **kwargs)
 
     @log
-    def users_likes_tracks_remove(self, track_ids: Union[List[Union[str, int]], str, int],
+    async def users_likes_tracks_remove(self, track_ids: Union[List[Union[str, int]], str, int],
                                   user_id: Union[str, int] = None,
                                   timeout: Union[int, float] = None, *args, **kwargs) -> bool:
         """Снять отметку "Мне нравится" у трека/треков.
@@ -1691,10 +1697,10 @@ class Client(YandexMusicObject):
         Raises:
             :class:`yandex_music.exceptions.YandexMusicError`: Базовое исключение библиотеки.
         """
-        return self._like_action('track', track_ids, True, user_id, timeout, *args, **kwargs)
+        return await self._like_action('track', track_ids, True, user_id, timeout, *args, **kwargs)
 
     @log
-    def users_likes_artists_add(self, artist_ids: Union[List[Union[str, int]], str, int],
+    async def users_likes_artists_add(self, artist_ids: Union[List[Union[str, int]], str, int],
                                 user_id: Union[str, int] = None,
                                 timeout: Union[int, float] = None, *args, **kwargs) -> bool:
         """Поставить отметку "Мне нравится" исполнителю/исполнителям.
@@ -1714,9 +1720,9 @@ class Client(YandexMusicObject):
         Raises:
             :class:`yandex_music.exceptions.YandexMusicError`: Базовое исключение библиотеки.
         """
-        return self._like_action('artist', artist_ids, False, user_id, timeout, *args, **kwargs)
+        return await self._like_action('artist', artist_ids, False, user_id, timeout, *args, **kwargs)
 
-    def users_likes_artists_remove(self, artist_ids: Union[List[Union[str, int]], str, int],
+    async def users_likes_artists_remove(self, artist_ids: Union[List[Union[str, int]], str, int],
                                    user_id: Union[str, int] = None,
                                    timeout: Union[int, float] = None, *args, **kwargs) -> bool:
         """Снять отметку "Мне нравится" у исполнителя/исполнителей.
@@ -1736,10 +1742,10 @@ class Client(YandexMusicObject):
         Raises:
             :class:`yandex_music.exceptions.YandexMusicError`: Базовое исключение библиотеки.
         """
-        return self._like_action('artist', artist_ids, True, user_id, timeout, *args, **kwargs)
+        return await self._like_action('artist', artist_ids, True, user_id, timeout, *args, **kwargs)
 
     @log
-    def users_likes_playlists_add(self, playlist_ids: Union[List[Union[str, int]], str, int],
+    async def users_likes_playlists_add(self, playlist_ids: Union[List[Union[str, int]], str, int],
                                   user_id: Union[str, int] = None,
                                   timeout: Union[int, float] = None, *args, **kwargs) -> bool:
         """Поставить отметку "Мне нравится" плейлисту/плейлистам.
@@ -1763,10 +1769,10 @@ class Client(YandexMusicObject):
         Raises:
             :class:`yandex_music.exceptions.YandexMusicError`: Базовое исключение библиотеки.
         """
-        return self._like_action('playlist', playlist_ids, False, user_id, timeout, *args, **kwargs)
+        return await self._like_action('playlist', playlist_ids, False, user_id, timeout, *args, **kwargs)
 
     @log
-    def users_likes_playlists_remove(self, playlist_ids: Union[List[Union[str, int]], str, int],
+    async def users_likes_playlists_remove(self, playlist_ids: Union[List[Union[str, int]], str, int],
                                      user_id: Union[str, int] = None,
                                      timeout: Union[int, float] = None, *args, **kwargs) -> bool:
         """Снять отметку "Мне нравится" у плейлиста/плейлистов.
@@ -1790,10 +1796,10 @@ class Client(YandexMusicObject):
         Raises:
             :class:`yandex_music.exceptions.YandexMusicError`: Базовое исключение библиотеки.
         """
-        return self._like_action('playlist', playlist_ids, True, user_id, timeout, *args, **kwargs)
+        return await self._like_action('playlist', playlist_ids, True, user_id, timeout, *args, **kwargs)
 
     @log
-    def users_likes_albums_add(self, album_ids: Union[List[Union[str, int]], str, int], user_id: Union[str, int] = None,
+    async def users_likes_albums_add(self, album_ids: Union[List[Union[str, int]], str, int], user_id: Union[str, int] = None,
                                timeout: Union[int, float] = None, *args, **kwargs) -> bool:
         """Поставить отметку "Мне нравится" альбому/альбомам.
 
@@ -1812,10 +1818,10 @@ class Client(YandexMusicObject):
         Raises:
             :class:`yandex_music.exceptions.YandexMusicError`: Базовое исключение библиотеки.
         """
-        return self._like_action('album', album_ids, False, user_id, timeout, *args, **kwargs)
+        return await self._like_action('album', album_ids, False, user_id, timeout, *args, **kwargs)
 
     @log
-    def users_likes_albums_remove(self, album_ids: Union[List[Union[str, int]], str, int],
+    async def users_likes_albums_remove(self, album_ids: Union[List[Union[str, int]], str, int],
                                   user_id: Union[str, int] = None,
                                   timeout: Union[int, float] = None, *args, **kwargs) -> bool:
         """Снять отметку "Мне нравится" у альбома/альбомов.
@@ -1835,9 +1841,9 @@ class Client(YandexMusicObject):
         Raises:
             :class:`yandex_music.exceptions.YandexMusicError`: Базовое исключение библиотеки.
         """
-        return self._like_action('album', album_ids, True, user_id, timeout, *args, **kwargs)
+        return await self._like_action('album', album_ids, True, user_id, timeout, *args, **kwargs)
 
-    def _get_list(self, object_type: str, ids: Union[List[Union[str, int]], int, str],
+    async def _get_list(self, object_type: str, ids: Union[List[Union[str, int]], int, str],
                   params: dict = None, timeout: Union[int, float] = None,
                   *args, **kwargs) -> List[Union[Artist, Album, Track, Playlist]]:
         """Получение объекта/объектов.
@@ -1865,12 +1871,12 @@ class Client(YandexMusicObject):
 
         url = f'{self.base_url}/{object_type}s' + ('/list' if object_type == 'playlist' else '')
 
-        result = self._request.post(url, params, timeout=timeout, *args, **kwargs)
+        result = await self._request.post(url, params, timeout=timeout, *args, **kwargs)
 
         return de_list.get(object_type)(result, self)
 
     @log
-    def artists(self, artist_ids: Union[List[Union[str, int]], int, str], timeout: Union[int, float] = None,
+    async def artists(self, artist_ids: Union[List[Union[str, int]], int, str], timeout: Union[int, float] = None,
                 *args, **kwargs) -> List[Artist]:
         """Получение исполнителя/исполнителей.
 
@@ -1887,10 +1893,10 @@ class Client(YandexMusicObject):
         Raises:
             :class:`yandex_music.exceptions.YandexMusicError`: Базовое исключение библиотеки.
         """
-        return self._get_list('artist', artist_ids, timeout=timeout, *args, **kwargs)
+        return await self._get_list('artist', artist_ids, timeout=timeout, *args, **kwargs)
 
     @log
-    def albums(self, album_ids: Union[List[Union[str, int]], int, str], timeout: Union[int, float] = None,
+    async def albums(self, album_ids: Union[List[Union[str, int]], int, str], timeout: Union[int, float] = None,
                *args, **kwargs) -> List[Album]:
         """Получение альбома/альбомов.
 
@@ -1907,10 +1913,10 @@ class Client(YandexMusicObject):
         Raises:
             :class:`yandex_music.exceptions.YandexMusicError`: Базовое исключение библиотеки.
         """
-        return self._get_list('album', album_ids, timeout=timeout, *args, **kwargs)
+        return await self._get_list('album', album_ids, timeout=timeout, *args, **kwargs)
 
     @log
-    def tracks(self, track_ids: Union[List[Union[str, int]], int, str], with_positions: bool = True,
+    async def tracks(self, track_ids: Union[List[Union[str, int]], int, str], with_positions: bool = True,
                timeout: Union[int, float] = None, *args, **kwargs) -> List[Track]:
         """Получение трека/треков.
 
@@ -1928,10 +1934,10 @@ class Client(YandexMusicObject):
         Raises:
             :class:`yandex_music.exceptions.YandexMusicError`: Базовое исключение библиотеки.
         """
-        return self._get_list('track', track_ids, {'with-positions': with_positions}, timeout, *args, **kwargs)
+        return await self._get_list('track', track_ids, {'with-positions': with_positions}, timeout, *args, **kwargs)
 
     @log
-    def playlists_list(self, playlist_ids: Union[List[Union[str, int]], int, str], timeout: Union[int, float] = None,
+    async def playlists_list(self, playlist_ids: Union[List[Union[str, int]], int, str], timeout: Union[int, float] = None,
                        *args, **kwargs) -> List[Playlist]:
         """Получение плейлиста/плейлистов.
 
@@ -1952,10 +1958,10 @@ class Client(YandexMusicObject):
         Raises:
             :class:`yandex_music.exceptions.YandexMusicError`: Базовое исключение библиотеки.
         """
-        return self._get_list('playlist', playlist_ids, timeout=timeout, *args, **kwargs)
+        return await self._get_list('playlist', playlist_ids, timeout=timeout, *args, **kwargs)
 
     @log
-    def playlists_collective_join(self, user_id: int, token: str, timeout: Union[int, float] = None,
+    async def playlists_collective_join(self, user_id: int, token: str, timeout: Union[int, float] = None,
                                   *args, **kwargs) -> bool:
         """Присоединение к плейлисту как соавтор.
 
@@ -1985,12 +1991,12 @@ class Client(YandexMusicObject):
             'token': token
         }
 
-        result = self._request.post(url, params=params, timeout=timeout, *args, **kwargs)
+        result = await self._request.post(url, params=params, timeout=timeout, *args, **kwargs)
 
         return result == 'ok'
 
     @log
-    def users_playlists_list(self, user_id: Union[str, int] = None, timeout: Union[int, float] = None,
+    async def users_playlists_list(self, user_id: Union[str, int] = None, timeout: Union[int, float] = None,
                              *args, **kwargs) -> List[Playlist]:
         """Получение списка плейлистов пользователя.
 
@@ -2012,11 +2018,11 @@ class Client(YandexMusicObject):
 
         url = f'{self.base_url}/users/{user_id}/playlists/list'
 
-        result = self._request.get(url, timeout=timeout, *args, **kwargs)
+        result = await self._request.get(url, timeout=timeout, *args, **kwargs)
 
         return Playlist.de_list(result, self)
 
-    def _get_likes(self, object_type: str, user_id: Union[str, int] = None, params: dict = None,
+    async def _get_likes(self, object_type: str, user_id: Union[str, int] = None, params: dict = None,
                    timeout: Union[int, float] = None, *args, **kwargs) -> Union[List[Like], Optional[TracksList]]:
         """Получение объектов с отметкой "Мне нравится".
 
@@ -2040,7 +2046,7 @@ class Client(YandexMusicObject):
 
         url = f'{self.base_url}/users/{user_id}/likes/{object_type}s'
 
-        result = self._request.get(url, params, timeout=timeout, *args, **kwargs)
+        result = await self._request.get(url, params, timeout=timeout, *args, **kwargs)
 
         if object_type == 'track':
             return TracksList.de_json(result.get('library'), self)
@@ -2048,7 +2054,7 @@ class Client(YandexMusicObject):
         return Like.de_list(result, self, object_type)
 
     @log
-    def users_likes_tracks(self, user_id: Union[str, int] = None, if_modified_since_revision: int = 0,
+    async def users_likes_tracks(self, user_id: Union[str, int] = None, if_modified_since_revision: int = 0,
                            timeout: Union[int, float] = None, *args, **kwargs) -> Optional[TracksList]:
         """Получение треков с отметкой "Мне нравится".
 
@@ -2066,11 +2072,11 @@ class Client(YandexMusicObject):
         Raises:
             :class:`yandex_music.exceptions.YandexMusicError`: Базовое исключение библиотеки.
         """
-        return self._get_likes('track', user_id, {'if-modified-since-revision': if_modified_since_revision}, timeout,
+        return await self._get_likes('track', user_id, {'if-modified-since-revision': if_modified_since_revision}, timeout,
                                *args, **kwargs)
 
     @log
-    def users_likes_albums(self, user_id: Union[str, int] = None, rich: bool = True, timeout: Union[int, float] = None,
+    async def users_likes_albums(self, user_id: Union[str, int] = None, rich: bool = True, timeout: Union[int, float] = None,
                            *args, **kwargs) -> List[Like]:
         """Получение альбомов с отметкой "Мне нравится".
 
@@ -2088,10 +2094,10 @@ class Client(YandexMusicObject):
         Raises:
             :class:`yandex_music.exceptions.YandexMusicError`: Базовое исключение библиотеки.
         """
-        return self._get_likes('album', user_id, {'rich': rich}, timeout, *args, **kwargs)
+        return await self._get_likes('album', user_id, {'rich': rich}, timeout, *args, **kwargs)
 
     @log
-    def users_likes_artists(self, user_id: Union[str, int] = None, with_timestamps: bool = True,
+    async def users_likes_artists(self, user_id: Union[str, int] = None, with_timestamps: bool = True,
                             timeout: Union[int, float] = None, *args, **kwargs) -> List[Like]:
         """Получение артистов с отметкой "Мне нравится".
 
@@ -2109,10 +2115,10 @@ class Client(YandexMusicObject):
         Raises:
             :class:`yandex_music.exceptions.YandexMusicError`: Базовое исключение библиотеки.
         """
-        return self._get_likes('artist', user_id, {'with-timestamps': with_timestamps}, timeout, *args, **kwargs)
+        return await self._get_likes('artist', user_id, {'with-timestamps': with_timestamps}, timeout, *args, **kwargs)
 
     @log
-    def users_likes_playlists(self, user_id: Union[str, int] = None, timeout: Union[int, float] = None,
+    async def users_likes_playlists(self, user_id: Union[str, int] = None, timeout: Union[int, float] = None,
                               *args, **kwargs) -> List[Like]:
         """Получение плейлистов с отметкой "Мне нравится".
 
@@ -2129,10 +2135,10 @@ class Client(YandexMusicObject):
         Raises:
             :class:`yandex_music.exceptions.YandexMusicError`: Базовое исключение библиотеки.
         """
-        return self._get_likes('playlist', user_id, timeout=timeout, *args, **kwargs)
+        return await self._get_likes('playlist', user_id, timeout=timeout, *args, **kwargs)
 
     @log
-    def users_dislikes_tracks(self, user_id: Union[str, int] = None, if_modified_since_revision: int = 0,
+    async def users_dislikes_tracks(self, user_id: Union[str, int] = None, if_modified_since_revision: int = 0,
                               timeout: Union[int, float] = None, *args, **kwargs) -> Optional[TracksList]:
         """Получение треков с отметкой "Не рекомендовать".
 
@@ -2155,12 +2161,12 @@ class Client(YandexMusicObject):
 
         url = f'{self.base_url}/users/{user_id}/dislikes/tracks'
 
-        result = self._request.get(url, {'if_modified_since_revision': if_modified_since_revision},
+        result = await self._request.get(url, {'if_modified_since_revision': if_modified_since_revision},
                                    timeout=timeout, *args, **kwargs)
 
         return TracksList.de_json(result.get('library'), self)
 
-    def _dislike_action(self, ids: Union[List[Union[str, int]], str, int], remove: bool = False,
+    async def _dislike_action(self, ids: Union[List[Union[str, int]], str, int], remove: bool = False,
                         user_id: Union[str, int] = None, timeout: Union[int, float] = None, *args, **kwargs) -> bool:
         """Действия с отметкой "Не рекомендовать".
 
@@ -2186,12 +2192,12 @@ class Client(YandexMusicObject):
         action = 'remove' if remove else 'add-multiple'
         url = f'{self.base_url}/users/{user_id}/dislikes/tracks/{action}'
 
-        result = self._request.post(url, {f'track-ids': ids}, timeout=timeout, *args, **kwargs)
+        result = await self._request.post(url, {f'track-ids': ids}, timeout=timeout, *args, **kwargs)
 
         return 'revision' in result
 
     @log
-    def users_dislikes_tracks_add(self, track_ids: Union[List[Union[str, int]], str, int],
+    async def users_dislikes_tracks_add(self, track_ids: Union[List[Union[str, int]], str, int],
                                   user_id: Union[str, int] = None,
                                   timeout: Union[int, float] = None, *args, **kwargs) -> bool:
         """Поставить отметку "Не рекомендовать" треку/трекам.
@@ -2214,10 +2220,10 @@ class Client(YandexMusicObject):
         Raises:
             :class:`yandex_music.exceptions.YandexMusicError`: Базовое исключение библиотеки.
         """
-        return self._dislike_action(track_ids, False, user_id, timeout, *args, **kwargs)
+        return await self._dislike_action(track_ids, False, user_id, timeout, *args, **kwargs)
 
     @log
-    def users_dislikes_tracks_remove(self, track_ids: Union[List[Union[str, int]], str, int],
+    async def users_dislikes_tracks_remove(self, track_ids: Union[List[Union[str, int]], str, int],
                                      user_id: Union[str, int] = None,
                                      timeout: Union[int, float] = None, *args, **kwargs) -> bool:
         """Снять отметку "Не рекомендовать" у трека/треков.
@@ -2237,10 +2243,10 @@ class Client(YandexMusicObject):
         Raises:
             :class:`yandex_music.exceptions.YandexMusicError`: Базовое исключение библиотеки.
         """
-        return self._dislike_action(track_ids, True, user_id, timeout, *args, **kwargs)
+        return await self._dislike_action(track_ids, True, user_id, timeout, *args, **kwargs)
 
     @log
-    def after_track(self, next_track_id: Union[str, int], context_item: str, prev_track_id: Union[str, int] = None,
+    async def after_track(self, next_track_id: Union[str, int], context_item: str, prev_track_id: Union[str, int] = None,
                     context: str = 'playlist', types: str = 'shot', from_: str = 'mobile-landing-origin-default',
                     timeout: Union[int, float] = None, *args, **kwargs) -> Optional[ShotEvent]:
         """Получение рекламы или шота от Алисы после трека.
@@ -2286,13 +2292,13 @@ class Client(YandexMusicObject):
             'types': types,
         }
 
-        result = self._request.get(url, params=params, timeout=timeout, *args, **kwargs)
+        result = await self._request.get(url, params=params, timeout=timeout, *args, **kwargs)
 
         # TODO судя по всему эндпоинт ещё возвращает рекламу после треков для пользователей без подписки.
         return ShotEvent.de_json(result.get('shot_event'), self)
 
     @log
-    def queues_list(self, device: str = None, timeout: Union[int, float] = None, *args, **kwargs) -> List[QueueItem]:
+    async def queues_list(self, device: str = None, timeout: Union[int, float] = None, *args, **kwargs) -> List[QueueItem]:
         """Получение всех очередей треков с разных устройств для синхронизации между ними.
 
         Note:
@@ -2319,12 +2325,12 @@ class Client(YandexMusicObject):
         url = f'{self.base_url}/queues'
 
         self._request.headers['X-Yandex-Music-Device'] = device
-        result = self._request.get(url, timeout=timeout, *args, **kwargs)
+        result = await self._request.get(url, timeout=timeout, *args, **kwargs)
 
         return QueueItem.de_list(result.get('queues'), self)
 
     @log
-    def queue(self, queue_id: str, timeout: Union[int, float] = None, *args, **kwargs) -> Optional[Queue]:
+    async def queue(self, queue_id: str, timeout: Union[int, float] = None, *args, **kwargs) -> Optional[Queue]:
         """Получение информации об очереди треков и самих треков в ней.
 
         Args:
@@ -2341,12 +2347,12 @@ class Client(YandexMusicObject):
         """
         url = f'{self.base_url}/queues/{queue_id}'
 
-        result = self._request.get(url, timeout=timeout, *args, **kwargs)
+        result = await self._request.get(url, timeout=timeout, *args, **kwargs)
 
         return Queue.de_json(result, self)
 
     @log
-    def queue_update_position(self, queue_id: str, current_index: int, device: str = None,
+    async def queue_update_position(self, queue_id: str, current_index: int, device: str = None,
                               timeout: Union[int, float] = None, *args, **kwargs) -> bool:
         """Установка текущего индекса проигрываемого трека в очереди треков.
 
@@ -2373,13 +2379,13 @@ class Client(YandexMusicObject):
         url = f'{self.base_url}/queues/{queue_id}/update-position'
 
         self._request.headers['X-Yandex-Music-Device'] = device
-        result = self._request.post(url, {'isInteractive': False}, params={'currentIndex': current_index},
+        result = await self._request.post(url, {'isInteractive': False}, params={'currentIndex': current_index},
                                     timeout=timeout, *args, **kwargs)
 
         return result.get('status') == 'ok'
 
     @log
-    def queue_create(self, queue: Union[Queue, str], device: str = None,
+    async def queue_create(self, queue: Union[Queue, str], device: str = None,
                      timeout: Union[int, float] = None, *args, **kwargs) -> Optional[str]:
         """Создание новой очереди треков.
 
@@ -2405,7 +2411,7 @@ class Client(YandexMusicObject):
         url = f'{self.base_url}/queues'
 
         self._request.headers['X-Yandex-Music-Device'] = device
-        result = self._request.post(url, queue, timeout=timeout, *args, **kwargs)
+        result = await self._request.post(url, queue, timeout=timeout, *args, **kwargs)
 
         return result.get('id_')
 

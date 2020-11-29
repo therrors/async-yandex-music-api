@@ -65,14 +65,14 @@ class MixLink(YandexMusicObject):
 
         super().handle_unknown_kwargs(self, **kwargs)
 
-    def download_background_image(self, filename: str, size: str = '200x200') -> None:
+    async def download_background_image(self, filename: str, size: str = '200x200') -> None:
         """Загрузка заднего фона.
 
         Args:
             filename (:obj:`str`): Путь для сохранения файла с названием и расширением.
             size (:obj:`str`, optional): Размер заднего фона.
         """
-        self.client.request.download(f'https://{self.background_image_uri.replace("%%", size)}', filename)
+        await self.client.request.download(f'https://{self.background_image_uri.replace("%%", size)}', filename)
 
     @classmethod
     def de_json(cls, data: dict, client: 'Client') -> Optional['MixLink']:

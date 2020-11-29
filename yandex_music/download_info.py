@@ -66,7 +66,7 @@ class DownloadInfo(YandexMusicObject):
                 if node.nodeType == node.TEXT_NODE:
                     return node.data
 
-    def get_direct_link(self) -> str:
+    async def get_direct_link(self) -> str:
         """Получение прямой ссылки на загрузку из XML ответа.
 
         Метод доступен только одну минуту с момента получения информации о загрузке, иначе 410 ошибка!
@@ -75,7 +75,7 @@ class DownloadInfo(YandexMusicObject):
             :obj:`str`: Прямая ссылка на загрузку трека.
 
         """
-        result = self.client.request.retrieve(self.download_info_url)
+        result = await self.client.request.retrieve(self.download_info_url)
 
         doc = minidom.parseString(result.text)
         host = self._get_text_node_data(doc.getElementsByTagName('host'))
@@ -88,14 +88,14 @@ class DownloadInfo(YandexMusicObject):
 
         return self.direct_link
 
-    def download(self, filename: str) -> None:
+    async def download(self, filename: str) -> None:
         """Загрузка трека.
 
         Args:
             filename (:obj:`str`): Путь и(или) название файла вместе с расширением.
         """
         if self.direct_link is None:
-            self.get_direct_link()
+            await self.get_direct_link()
 
         self.client.request.download(self.direct_link, filename)
 
@@ -118,7 +118,7 @@ class DownloadInfo(YandexMusicObject):
         return cls(client=client, **data)
 
     @classmethod
-    def de_list(cls, data: dict, client: 'Client', get_direct_links: bool = False) -> List['DownloadInfo']:
+    async def de_list(cls, data: dict, client: 'Client', get_direct_links: bool = False) -> List['DownloadInfo']:
         """Десериализация списка объектов.
 
         Args:
@@ -134,7 +134,7 @@ class DownloadInfo(YandexMusicObject):
 
         downloads_info = list()
         for download_info in data:
-            downloads_info.append(cls.de_json(download_info, client))
+            await downloads_info.append(cls.de_json(download_info, client))
 
         if get_direct_links:
             for info in downloads_info:
