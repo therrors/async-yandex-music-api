@@ -43,10 +43,12 @@ class Request:
 
     def __init__(self,
                  client=None,
-                 headers=None):
+                 headers=None,
+                 proxy_url=None):
         self.headers = headers or HEADERS.copy()
 
         self.client = self.set_and_return_client(client)
+        self.proxies = proxy_url or None
 
     def set_language(self, lang: str) -> None:
         """Добавляет заголовок языка для каждого запроса.
@@ -187,9 +189,12 @@ class Request:
 
         kwargs['headers']['User-Agent'] = USER_AGENT
 
-        async with aiohttp.ClientSession() as client:        
-            resp = await client.request(*args, **kwargs)
-            resp.content = await resp.read()
+        async with aiohttp.ClientSession() as client:
+            try:    
+                resp = await client.request(*args, **kwargs)
+                resp.content = await resp.read()
+            except aiohttp.ServerTimeoutError:
+                raise TimedOut
             resp.status_code = resp.status
 
         if 200 <= resp.status_code <= 299:
