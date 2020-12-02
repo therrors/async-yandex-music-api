@@ -15,7 +15,7 @@ importlib_metadata = "*"
 atomicwrites = "*"
 
 [packages]
-requests = {extras = ["socks"]}
+aiohttp = "*"
 
 [requires]
 python_version = "3.7"
