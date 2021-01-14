@@ -193,12 +193,13 @@ class Request:
             try:    
                 resp = await client.request(*args, **kwargs)
                 resp.content = await resp.read()
-                try:
-                    resp.text = resp.content.decode()
-                except:
-                    resp.text = None
             except aiohttp.ServerTimeoutError:
                 raise TimedOut
+            try:
+                resp.text = resp.content.decode('utf-8')
+            except UnicodeDecodeError:
+                resp.text = None
+
             resp.status_code = resp.status
 
         if 200 <= resp.status_code <= 299:
